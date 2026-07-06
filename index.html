@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AlamKita.id — Pemandu Wisata Alam Indonesia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Work+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root{
+    --hutan: #16332a;
+    --hutan-deep: #0d2018;
+    --krem: #f4eddb;
+    --senja: #df7a3e;
+    --senja-deep: #c9612a;
+    --emas: #c9a13b;
+    --tanah: #3b2c22;
+    --kabut: #cdd9c9;
+    --line: rgba(244,237,219,0.16);
+    --radius: 2px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    font-family:'Work Sans', sans-serif;
+    background: var(--hutan-deep);
+    color: var(--krem);
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  h1,h2,h3,.display{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    letter-spacing:-0.01em;
+  }
+  ::selection{ background: var(--senja); color: #0d2018; }
+  a{color:inherit;}
+
+  /* ---------- scroll reveal ---------- */
+  .reveal{ opacity:0; transform: translateY(18px); transition: opacity .7s ease, transform .7s ease; }
+  .reveal.in{ opacity:1; transform:none; }
+
+  @media (prefers-reduced-motion: reduce){
+    .reveal{ opacity:1; transform:none; transition:none; }
+    *{ animation-duration: 0.001ms !important; }
+  }
+
+  /* ================= LOGIN SCREEN ================= */
+  #loginScreen{
+    position:fixed; inset:0; z-index:50;
+    display:flex;
+    background: #0d2018;
+  }
+  .login-art{
+    flex:1.1;
+    position:relative;
+    overflow:hidden;
+    background: linear-gradient(180deg, #1c2f22 0%, #16332a 45%, #0d2018 100%);
+    display:flex; align-items:flex-end;
+  }
+  .login-art svg{ width:100%; display:block; }
+  .login-art .sun{
+    position:absolute; top:14%; left:50%; transform:translateX(-50%);
+    width:120px; height:120px; border-radius:50%;
+    background: radial-gradient(circle at 35% 35%, var(--emas), var(--senja-deep) 70%);
+    box-shadow: 0 0 90px 18px rgba(223,122,62,0.35);
+    animation: rise 5s ease-in-out infinite alternate;
+  }
+  @keyframes rise{ from{ transform:translate(-50%,0px);} to{ transform:translate(-50%,-10px);} }
+  .login-art .tagline{
+    position:absolute; bottom:48px; left:48px; right:48px; z-index:2;
+  }
+  .login-art .tagline .eyebrow{
+    font-size:12px; letter-spacing:0.18em; text-transform:uppercase; color:var(--emas); margin-bottom:10px; display:block;
+  }
+  .login-art .tagline h2{ font-size:clamp(28px,4vw,42px); line-height:1.1; max-width:520px; }
+
+  .login-panel{
+    flex:1; min-width:380px; max-width:520px;
+    display:flex; align-items:center; justify-content:center;
+    padding:48px;
+    background: #f4eddb;
+    color: var(--tanah);
+  }
+  .login-box{ width:100%; max-width:360px; }
+  .login-box .brandmark{ display:flex; align-items:center; gap:10px; margin-bottom:36px; }
+  .login-box .brandmark .leaf{ width:30px; height:30px; }
+  .login-box .brandmark span{ font-family:'Fraunces',serif; font-weight:700; font-size:19px; letter-spacing:-0.01em; }
+  .login-box h1{ font-size:28px; margin-bottom:8px; color:#0d2018; }
+  .login-box p.sub{ color:#5b5147; font-size:14.5px; margin-bottom:30px; line-height:1.5; }
+
+  .field{ margin-bottom:18px; }
+  .field label{ display:block; font-size:12.5px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; color:#6b5f50; margin-bottom:7px; }
+  .field input{
+    width:100%; padding:13px 14px; border:1.5px solid #d8cdb4; border-radius:var(--radius);
+    background:#fffdf8; font-family:'Work Sans',sans-serif; font-size:15px; color:var(--tanah);
+    transition: border-color .2s ease;
+  }
+  .field input:focus{ outline:none; border-color: var(--senja); }
+  .field .err{ font-size:12px; color:#a4392a; margin-top:6px; min-height:14px; }
+
+  .btn-primary{
+    width:100%; padding:14px; border:none; border-radius:var(--radius);
+    background: #0d2018; color: #f4eddb;
+    font-family:'Work Sans',sans-serif; font-weight:600; font-size:15px; letter-spacing:0.01em;
+    cursor:pointer; transition: background .2s ease, transform .15s ease;
+    margin-top:6px;
+  }
+  .btn-primary:hover{ background: var(--senja-deep); }
+  .btn-primary:active{ transform: scale(0.99); }
+  .btn-primary:focus-visible{ outline: 2px solid var(--senja); outline-offset:2px; }
+
+  .login-note{ margin-top:22px; font-size:12.5px; color:#857a69; line-height:1.5; }
+
+  @media (max-width: 860px){
+    #loginScreen{ flex-direction:column; }
+    .login-art{ flex:none; height:38vh; }
+    .login-panel{ flex:none; max-width:none; min-height:62vh; }
+  }
+
+  /* ================= APP SHELL ================= */
+  #app{ display:none; }
+  #app.active{ display:block; }
+
+  header.topbar{
+    position:sticky; top:0; z-index:30;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 40px;
+    background: rgba(13,32,24,0.88);
+    backdrop-filter: blur(8px);
+    border-bottom:1px solid var(--line);
+  }
+  .brandmark2{ display:flex; align-items:center; gap:10px; }
+  .brandmark2 .leaf{ width:26px; height:26px; }
+  .brandmark2 span{ font-family:'Fraunces',serif; font-weight:700; font-size:18px; }
+  nav.toplinks{ display:flex; gap:30px; font-size:14px; }
+  nav.toplinks a{ text-decoration:none; opacity:0.78; transition:opacity .2s; }
+  nav.toplinks a:hover{ opacity:1; }
+  .user-pill{
+    display:flex; align-items:center; gap:10px;
+    font-size:13.5px; padding:7px 8px 7px 14px; border:1px solid var(--line); border-radius:999px;
+  }
+  .user-pill .dot{ width:8px; height:8px; border-radius:50%; background:var(--senja); }
+  .user-pill button{
+    background:none; border:none; color:var(--krem); opacity:0.6; cursor:pointer; font-size:12px;
+    padding:6px 10px; border-radius:999px; transition: opacity .2s, background .2s;
+  }
+  .user-pill button:hover{ opacity:1; background:rgba(244,237,219,0.08); }
+
+  /* ---- hero ---- */
+  .hero{
+    position:relative; padding:56px 40px 100px; overflow:hidden;
+    background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(223,122,62,0.18), transparent 60%);
+  }
+  .hero-guide-grid{
+    max-width:1180px; margin:0 auto; position:relative; z-index:3;
+    display:grid; grid-template-columns: 1fr 1fr; gap:48px; align-items:start;
+  }
+  @media (max-width: 920px){ .hero-guide-grid{ grid-template-columns:1fr; } }
+  .hero-inner{ padding-top:20px; }
+  .hero .eyebrow{ font-size:12.5px; letter-spacing:0.2em; text-transform:uppercase; color:var(--emas); display:block; margin-bottom:18px; }
+  .hero h1{ font-size: clamp(34px, 3.6vw, 54px); line-height:1.08; }
+  .hero h1 em{ font-style:italic; color:var(--senja); }
+  .hero p.lede{ margin-top:20px; font-size:16.5px; max-width:480px; color:var(--kabut); line-height:1.6; }
+
+  .stats-inline{ display:flex; gap:30px; flex-wrap:wrap; margin-top:32px; }
+  .stat-mini .num{ font-family:'Fraunces',serif; font-size:28px; color:var(--emas); }
+  .stat-mini .lbl{ font-size:12.5px; color:var(--kabut); opacity:0.85; margin-top:2px; max-width:130px; }
+
+  .hero .hero-ctas{ margin-top:32px; display:flex; gap:14px; flex-wrap:wrap; }
+  .hero .hero-ctas button{
+    padding:14px 26px; border-radius:999px; font-size:14.5px; font-weight:600; cursor:pointer;
+    border:1px solid var(--line); background:transparent; color:var(--krem);
+    transition: all .2s ease;
+  }
+  .hero .hero-ctas button.solid{ background:var(--senja); border-color:var(--senja); color:#0d2018; }
+  .hero .hero-ctas button.solid:hover{ background:var(--senja-deep); }
+  .hero .hero-ctas button:not(.solid):hover{ border-color:var(--krem); }
+
+  .mountains{ position:absolute; left:0; right:0; bottom:-2px; z-index:1; pointer-events:none; }
+  .mountains svg{ width:100%; display:block; }
+
+  /* ---- sections generic ---- */
+  section{ max-width:1180px; margin:0 auto; padding:90px 40px; }
+  section.tight{ padding-top:0; }
+  .section-head{ display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:46px; gap:24px; flex-wrap:wrap; }
+  .section-head .eyebrow{ font-size:12.5px; letter-spacing:0.18em; text-transform:uppercase; color:var(--emas); display:block; margin-bottom:12px; }
+  .section-head h2{ font-size: clamp(28px,3.4vw,42px); max-width:560px; }
+  .section-head p{ color:var(--kabut); max-width:380px; font-size:15px; line-height:1.6; }
+
+  /* ---- peta ---- */
+  .map-wrap{
+    border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;
+  }
+  #mapContainer{ height:460px; width:100%; background:#0d2018; }
+  .leaflet-popup-content-wrapper{
+    background: var(--hutan); color: var(--krem); border-radius: var(--radius);
+  }
+  .leaflet-popup-tip{ background: var(--hutan); }
+  .leaflet-popup-content{ margin:14px 16px; font-family:'Work Sans', sans-serif; }
+  .map-popup h4{ font-family:'Fraunces',serif; font-size:16px; margin-bottom:6px; color:var(--krem); }
+  .map-popup p{ font-size:13px; color:var(--kabut); margin-bottom:10px; line-height:1.5; }
+  .map-popup button{
+    border:none; background:var(--senja); color:#0d2018; font-weight:600; font-size:12.5px;
+    padding:8px 12px; border-radius:999px; cursor:pointer;
+  }
+  .map-popup button:hover{ background:var(--senja-deep); }
+  .leaflet-container{ font-family:'Work Sans', sans-serif; }
+
+  /* destinations grid */
+  .dest-grid{ display:grid; grid-template-columns: repeat(3,1fr); gap:22px; }
+  @media (max-width: 920px){ .dest-grid{ grid-template-columns: repeat(2,1fr);} }
+  @media (max-width: 620px){ .dest-grid{ grid-template-columns: 1fr;} }
+
+  .dest-card{
+    border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;
+    background: linear-gradient(155deg, rgba(244,237,219,0.04), transparent);
+    cursor:pointer; transition: transform .25s ease, border-color .25s ease;
+    display:flex; flex-direction:column;
+  }
+  .dest-card:hover{ transform: translateY(-5px); border-color: var(--senja); }
+  .dest-card .art{ height:170px; position:relative; }
+  .dest-card .art svg{ width:100%; height:100%; display:block; }
+  .dest-card .art img{ width:100%; height:100%; display:block; object-fit:cover; }
+  .dest-card .body{ padding:22px; flex:1; display:flex; flex-direction:column; }
+  .dest-card .tag{ font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--senja); margin-bottom:8px; }
+  .dest-card h3{ font-size:20px; margin-bottom:8px; }
+  .dest-card p{ font-size:13.5px; color:var(--kabut); line-height:1.55; flex:1; }
+  .dest-card .meta{ display:flex; gap:16px; margin-top:16px; font-size:12px; color:var(--emas); }
+
+  /* how it works */
+  .steps{ display:grid; grid-template-columns: repeat(3,1fr); gap:30px; }
+  @media (max-width: 760px){ .steps{ grid-template-columns:1fr; } }
+  .step{ border-top:1px solid var(--line); padding-top:22px; }
+  .step .mark{ font-family:'Fraunces',serif; font-style:italic; color:var(--senja); font-size:15px; margin-bottom:14px; display:block; }
+  .step h3{ font-size:19px; margin-bottom:10px; }
+  .step p{ font-size:14px; color:var(--kabut); line-height:1.6; }
+
+  /* ================= AI CHAT GUIDE ================= */
+  .guide-section{ background: linear-gradient(180deg, transparent, rgba(223,122,62,0.06)); }
+  .guide-wrap{
+    display:grid; grid-template-columns: 1fr 1.3fr; gap:40px; align-items:start;
+  }
+  @media (max-width: 880px){ .guide-wrap{ grid-template-columns:1fr; } }
+  .guide-intro .eyebrow{ font-size:12.5px; letter-spacing:0.18em; text-transform:uppercase; color:var(--emas); display:block; margin-bottom:14px; }
+  .guide-intro h2{ font-size:clamp(26px,3vw,36px); margin-bottom:16px; }
+  .guide-intro p{ color:var(--kabut); font-size:15px; line-height:1.65; margin-bottom:26px; }
+  .chip-row{ display:flex; flex-wrap:wrap; gap:9px; }
+  .chip{
+    padding:9px 14px; border:1px solid var(--line); border-radius:999px; font-size:12.5px;
+    background:transparent; color:var(--krem); cursor:pointer; transition: all .2s ease;
+  }
+  .chip:hover{ border-color:var(--senja); color:var(--senja); }
+
+  .chat-card{
+    border:1px solid var(--line); border-radius:var(--radius);
+    background: var(--hutan); display:flex; flex-direction:column; height:560px;
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.5);
+  }
+  .chat-head{
+    display:flex; align-items:center; gap:10px; padding:16px 20px; border-bottom:1px solid var(--line);
+  }
+  .chat-head .ring{ width:9px; height:9px; border-radius:50%; background:#5ec98a; box-shadow:0 0 0 3px rgba(94,201,138,0.18); }
+  .chat-head .who{ font-size:13.5px; font-weight:600; }
+  .chat-head .role{ font-size:11.5px; color:var(--kabut); opacity:0.7; margin-left:auto; }
+
+  .chat-body{ flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:14px; }
+  .chat-body::-webkit-scrollbar{ width:6px; }
+  .chat-body::-webkit-scrollbar-thumb{ background: rgba(244,237,219,0.15); border-radius:3px; }
+
+  .msg{ max-width:84%; font-size:14.5px; line-height:1.6; padding:12px 15px; border-radius:var(--radius); white-space:pre-wrap; }
+  .msg.bot{ align-self:flex-start; background: rgba(244,237,219,0.07); border:1px solid var(--line); border-top-left-radius:0; }
+  .msg.user{ align-self:flex-end; background: var(--senja); color: #0d2018; border-top-right-radius:0; font-weight:500; }
+  .msg.bot::before{ content:"Pemandu"; display:block; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--emas); margin-bottom:5px; opacity:0.8; }
+
+  .typing{ align-self:flex-start; display:flex; gap:5px; padding:14px 16px; }
+  .typing span{ width:6px; height:6px; border-radius:50%; background:var(--emas); opacity:0.5; animation: blink 1.2s infinite; }
+  .typing span:nth-child(2){ animation-delay:.2s; }
+  .typing span:nth-child(3){ animation-delay:.4s; }
+  @keyframes blink{ 0%,80%,100%{ opacity:.3; } 40%{ opacity:1; } }
+
+  .chat-input{ display:flex; gap:10px; padding:16px; border-top:1px solid var(--line); }
+  .chat-input input{
+    flex:1; padding:13px 15px; border-radius:999px; border:1px solid var(--line);
+    background: rgba(244,237,219,0.05); color:var(--krem); font-size:14px; font-family:'Work Sans',sans-serif;
+  }
+  .chat-input input::placeholder{ color: var(--kabut); opacity:0.5; }
+  .chat-input input:focus{ outline:none; border-color:var(--senja); }
+  .chat-input button{
+    width:46px; height:46px; border-radius:50%; border:none; background:var(--senja); color:#0d2018;
+    cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition: background .2s;
+  }
+  .chat-input button:hover{ background:var(--senja-deep); }
+  .chat-input button:disabled{ opacity:0.5; cursor:not-allowed; }
+
+  /* footer */
+  footer{
+    border-top:1px solid var(--line); padding:40px 40px; text-align:center; font-size:12.5px; color:var(--kabut); opacity:0.6;
+  }
+  /* ---------- Modal Ulasan ---------- */
+  .ulasan-overlay{
+    position:fixed; inset:0; background:rgba(13,32,24,0.7); backdrop-filter:blur(3px);
+    display:none; align-items:center; justify-content:center; z-index:200; padding:20px;
+  }
+  .ulasan-overlay.active{ display:flex; }
+  .ulasan-modal{
+    background:#f4eddb; color:#0d2018; border-radius:16px; padding:28px;
+    max-width:480px; width:100%; max-height:85vh; overflow-y:auto; position:relative;
+  }
+  .ulasan-close{
+    position:absolute; top:14px; right:16px; background:none; border:none; font-size:24px;
+    line-height:1; cursor:pointer; color:#0d2018; opacity:0.6;
+  }
+  .ulasan-close:hover{ opacity:1; }
+  .ulasan-modal h3{ font-size:20px; margin-bottom:4px; padding-right:24px; }
+  .ulasan-summary{ font-size:13px; opacity:0.7; margin-bottom:16px; }
+  .ulasan-stars{ display:flex; gap:6px; margin-bottom:10px; }
+  .ulasan-stars .star{
+    background:none; border:none; font-size:26px; cursor:pointer; color:#d8cfb2; padding:0;
+    transition:color .15s;
+  }
+  .ulasan-stars .star.active{ color:var(--senja-deep); }
+  #ulasanKomentar{
+    width:100%; border:1px solid #d8cfb2; border-radius:10px; padding:10px 12px;
+    font-family:inherit; font-size:14px; resize:vertical; margin-bottom:8px; background:#fff;
+  }
+  #ulasanKomentar:focus{ outline:none; border-color:var(--senja); }
+  .ulasan-list{ margin-top:20px; border-top:1px solid #e2d9bd; padding-top:16px; }
+  .ulasan-item{ margin-bottom:14px; padding-bottom:14px; border-bottom:1px dashed #e2d9bd; }
+  .ulasan-item:last-child{ border-bottom:none; }
+  .ulasan-item .ulasan-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+  .ulasan-item .nama{ font-weight:600; font-size:14px; }
+  .ulasan-item .bintang-tampil{ color:var(--senja-deep); font-size:13px; }
+  .ulasan-item .komentar{ font-size:13px; opacity:0.85; line-height:1.5; }
+  .ulasan-item .tanggal{ font-size:11px; opacity:0.5; margin-top:2px; }
+  .ulasan-empty{ font-size:13px; opacity:0.6; text-align:center; padding:12px 0; }
+  .dest-card .btn-ulasan{
+    margin-top:10px; background:none; border:1px solid var(--hutan); color:var(--hutan);
+    border-radius:20px; padding:6px 14px; font-size:12px; cursor:pointer; font-family:inherit;
+  }
+  .dest-card .btn-ulasan:hover{ background:var(--hutan); color:var(--krem); }
+  /* ================= MODE TERANG ================= */
+  body[data-theme="light"]{
+    --hutan-deep:#faf5e6;
+    --krem:#16332a;
+    --hutan:#ffffff;
+    --kabut:#55645a;
+    --line: rgba(22,51,42,0.14);
+  }
+  body[data-theme="light"] header.topbar{ background: rgba(250,245,230,0.92); box-shadow:0 1px 0 rgba(22,51,42,0.06); }
+  body[data-theme="light"] .user-pill button:hover{ background: rgba(22,51,42,0.06); }
+  body[data-theme="light"] .dest-card{ background: linear-gradient(155deg, rgba(22,51,42,0.035), transparent); }
+  body[data-theme="light"] .chat-body::-webkit-scrollbar-thumb{ background: rgba(22,51,42,0.18); }
+  body[data-theme="light"] .msg.bot{ background: rgba(22,51,42,0.05); }
+  body[data-theme="light"] .chat-input input{ background: rgba(22,51,42,0.04); }
+  body[data-theme="light"] .chat-card{ box-shadow: 0 30px 60px -30px rgba(22,51,42,0.18); }
+  body[data-theme="light"] .dest-card:hover{ box-shadow:0 20px 40px -25px rgba(22,51,42,0.25); }
+
+  .theme-toggle{
+    display:flex; align-items:center; justify-content:center;
+    width:38px; height:38px; border-radius:50%; border:1px solid var(--line);
+    background:transparent; color:var(--krem); cursor:pointer; margin-right:4px;
+    transition: background .2s, border-color .2s;
+  }
+  .theme-toggle:hover{ border-color:var(--senja); color:var(--senja); }
+  .theme-toggle svg{ width:18px; height:18px; }
+</style>
+</head>
+<body>
+
+<!-- ============= LOGIN SCREEN ============= -->
+<div id="loginScreen">
+  <div class="login-art">
+    <div class="sun"></div>
+    <svg viewBox="0 0 700 420" preserveAspectRatio="none">
+      <polygon points="0,420 0,220 120,90 230,260 320,150 430,300 520,180 620,290 700,230 700,420" fill="#0f261c"/>
+      <polygon points="0,420 0,300 90,230 200,330 300,250 410,360 520,280 620,360 700,310 700,420" fill="#0a1c14"/>
+    </svg>
+    <div class="tagline">
+      <span class="eyebrow">AlamKita.id</span>
+      <h2>Setiap jalur punya cerita. Kami bantu kamu menemukannya.</h2>
+    </div>
+  </div>
+
+  <div class="login-panel">
+    <div class="login-box">
+      <div class="brandmark">
+        <svg class="leaf" viewBox="0 0 24 24" fill="none"><path d="M3 13c0-6 5-10 12-10 1 7-2 12-9 14-2 .6-3-1-3-4z" fill="#16332a"/><path d="M3 13c4 0 8-2 10-6" stroke="#df7a3e" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <span>AlamKita.id</span>
+      </div>
+      <h1 id="authTitle">Selamat datang.</h1>
+      <p class="sub" id="authSub">Masuk dengan akunmu untuk mulai bertanya pada pemandu AI seputar destinasi, rute, biaya, dan tips perjalananmu.</p>
+
+      <form id="loginForm" novalidate>
+        <div class="field" id="namaField">
+          <label for="namaInput">Nama lengkap</label>
+          <input type="text" id="namaInput" placeholder="cth. Sari Wulandari" autocomplete="name">
+          <div class="err" id="namaErr"></div>
+        </div>
+        <div class="field">
+          <label for="emailInput">Alamat email</label>
+          <input type="email" id="emailInput" placeholder="cth. sari@gmail.com" autocomplete="email">
+          <div class="err" id="emailErr"></div>
+        </div>
+        <div class="field">
+          <label for="passwordInput">Password</label>
+          <input type="password" id="passwordInput" placeholder="minimal 6 karakter" autocomplete="current-password">
+          <div class="err" id="passwordErr"></div>
+        </div>
+        <div class="err" id="formErr" style="margin-bottom:10px;"></div>
+        <button type="submit" class="btn-primary" id="authSubmitBtn">Masuk</button>
+      </form>
+      <p class="login-note">
+        <span id="authToggleText">Belum punya akun?</span>
+        <a href="#" id="authToggleLink" style="color:var(--senja-deep); font-weight:600; text-decoration:none;">Daftar di sini</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ============= MAIN APP ============= -->
+<div id="app">
+
+  <header class="topbar">
+    <div class="brandmark2">
+      <svg class="leaf" viewBox="0 0 24 24" fill="none"><path d="M3 13c0-6 5-10 12-10 1 7-2 12-9 14-2 .6-3-1-3-4z" fill="#df7a3e"/><path d="M3 13c4 0 8-2 10-6" stroke="#f4eddb" stroke-width="1.3" stroke-linecap="round"/></svg>
+      <span>AlamKita.id</span>
+    </div>
+    <nav class="toplinks">
+      <a href="#pemandu">Pemandu AI</a>
+      <a href="#destinasi">Destinasi</a>
+      <a href="#peta">Peta</a>
+      <a href="#cara">Cara kerja</a>
+    </nav>
+    <div style="display:flex; align-items:center; gap:14px;">
+      <button class="theme-toggle" id="themeToggleBtn" type="button" aria-label="Ganti mode terang/gelap" title="Ganti mode terang/gelap"></button>
+      <div class="user-pill">
+        <span class="dot"></span>
+        <span id="userGreeting">Halo</span>
+        <button id="logoutBtn">Keluar</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- PEMANDU AI -->
+  <!-- HERO + PEMANDU AI -->
+  <section id="pemandu" class="hero">
+    <div class="hero-guide-grid">
+      <div class="hero-inner reveal">
+        <span class="eyebrow">Portal wisata alam Indonesia berbasis AI</span>
+        <h1>Tanya saja. Pemandu <em>AI</em> kami yang urus sisanya.</h1>
+        <p class="lede">Dari Sabang sampai Merauke — tanyakan rute, perkiraan biaya, musim terbaik, dan tips berkunjung ke alam Indonesia, dijawab seketika oleh pemandu AI kami.</p>
+
+        <div class="stats-inline">
+          <div class="stat-mini"><div class="num">8</div><div class="lbl">Destinasi alam terdata</div></div>
+          <div class="stat-mini"><div class="num">7</div><div class="lbl">Provinsi tercakup</div></div>
+          <div class="stat-mini"><div class="num">24/7</div><div class="lbl">Pemandu AI siap menjawab</div></div>
+        </div>
+
+        <div class="hero-ctas">
+          <button class="solid" onclick="document.getElementById('chatInput').focus()">Tanya pemandu AI</button>
+          <button onclick="document.getElementById('destinasi').scrollIntoView({behavior:'smooth'})">Lihat destinasi</button>
+        </div>
+      </div>
+
+      <div class="chat-card reveal">
+        <div class="chat-head">
+          <span class="ring"></span>
+          <span class="who">Pemandu AlamKita</span>
+          <span class="role">AI · Wisata Alam Indonesia</span>
+        </div>
+        <div class="chat-body" id="chatBody"></div>
+        <div class="chip-row" id="chipRow">
+          <button class="chip" data-q="Rute terbaik ke Gunung Bromo dari Malang seperti apa?">Rute ke Bromo</button>
+          <button class="chip" data-q="Berapa kira-kira biaya trip ke Raja Ampat untuk 4 hari?">Biaya ke Raja Ampat</button>
+          <button class="chip" data-q="Bulan apa waktu terbaik mendaki Rinjani?">Waktu terbaik Rinjani</button>
+        </div>
+        <form class="chat-input" id="chatForm">
+          <input type="text" id="chatInput" placeholder="Tanyakan destinasi, rute, biaya, atau tips..." autocomplete="off">
+          <button type="submit" aria-label="Kirim">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 11.5L21 3l-7 18-3.5-7.5L3 11.5z" fill="currentColor"/></svg>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="mountains">
+      <svg viewBox="0 0 1400 220" preserveAspectRatio="none">
+        <polygon points="0,220 0,140 180,40 320,150 480,70 650,160 800,60 980,170 1150,90 1300,150 1400,110 1400,220" fill="#0f261c" opacity="0.9"/>
+        <polygon points="0,220 0,180 220,120 400,190 600,130 820,200 1000,140 1200,200 1400,170 1400,220" fill="#0a1c14"/>
+      </svg>
+    </div>
+  </section>
+
+  <!-- DESTINASI -->
+  <section id="destinasi">
+    <div class="section-head reveal">
+      <div>
+        <span class="eyebrow">Pilihan kami</span>
+        <h2>Destinasi yang sering ditanyakan</h2>
+      </div>
+      <p>Setiap kartu di bawah bisa langsung kamu tanyakan lebih dalam ke pemandu AI — klik untuk mengisi pertanyaan otomatis.</p>
+    </div>
+
+    <div class="dest-grid" id="destGrid"></div>
+  </section>
+
+  <!-- PETA -->
+  <section id="peta">
+    <div class="section-head reveal">
+      <div>
+        <span class="eyebrow">Jelajahi lokasi</span>
+        <h2>Peta sebaran destinasi</h2>
+      </div>
+      <p>Klik penanda di peta untuk melihat ringkasan destinasi, atau langsung tanyakan ke pemandu AI.</p>
+    </div>
+    <div class="map-wrap reveal">
+      <div id="mapContainer"></div>
+    </div>
+  </section>
+
+  <!-- CARA KERJA -->
+  <section id="cara" class="reveal">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow">Cara kerja</span>
+        <h2>Tiga langkah sebelum kamu berangkat</h2>
+      </div>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <span class="mark">Mulai</span>
+        <h3>Ceritakan rencanamu</h3>
+        <p>Sebutkan destinasi, tanggal, atau gaya perjalanan yang kamu bayangkan — santai, menantang, atau hemat.</p>
+      </div>
+      <div class="step">
+        <span class="mark">Tanya</span>
+        <h3>Pemandu AI menjawab</h3>
+        <p>Rute, estimasi biaya, musim terbaik, izin yang diperlukan, sampai barang yang wajib dibawa — semua dalam satu obrolan.</p>
+      </div>
+      <div class="step">
+        <span class="mark">Berangkat</span>
+        <h3>Susun rencana akhir</h3>
+        <p>Simpan jawabannya sebagai catatan perjalanan, lalu sesuaikan dengan kondisi terbaru di lapangan sebelum berangkat.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    AlamKita.id — Portal wisata alam Indonesia. Jawaban pemandu AI bersifat informatif, selalu cek kondisi terbaru sebelum berangkat.
+  </footer>
+</div>
+
+<div class="ulasan-overlay" id="ulasanOverlay">
+  <div class="ulasan-modal">
+    <button type="button" class="ulasan-close" id="ulasanCloseBtn" aria-label="Tutup">&times;</button>
+    <h3 id="ulasanTitle">Ulasan destinasi</h3>
+    <p class="ulasan-summary" id="ulasanSummary"></p>
+
+    <form id="ulasanForm">
+      <div class="ulasan-stars" id="ulasanStars">
+        <button type="button" class="star" data-star="1">&#9733;</button>
+        <button type="button" class="star" data-star="2">&#9733;</button>
+        <button type="button" class="star" data-star="3">&#9733;</button>
+        <button type="button" class="star" data-star="4">&#9733;</button>
+        <button type="button" class="star" data-star="5">&#9733;</button>
+      </div>
+      <textarea id="ulasanKomentar" rows="3" placeholder="Ceritakan pengalamanmu di sini..." maxlength="500"></textarea>
+      <div class="err" id="ulasanErr"></div>
+      <button type="submit" class="btn-primary" id="ulasanSubmitBtn">Kirim ulasan</button>
+    </form>
+
+    <div class="ulasan-list" id="ulasanList"></div>
+  </div>
+</div>
+
+<script>
+/* ---------------- Mode terang / gelap ---------------- */
+const ICON_MATAHARI = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+const ICON_BULAN = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>';
+const themeToggleBtn = document.getElementById('themeToggleBtn');
+
+function terapkanTema(tema){
+  document.body.setAttribute('data-theme', tema);
+  themeToggleBtn.innerHTML = tema === 'light' ? ICON_BULAN : ICON_MATAHARI;
+  themeToggleBtn.title = tema === 'light' ? 'Ganti ke mode gelap' : 'Ganti ke mode terang';
+  localStorage.setItem('alamkita_theme', tema);
+}
+
+const temaTersimpan = localStorage.getItem('alamkita_theme') || 'dark';
+terapkanTema(temaTersimpan);
+
+themeToggleBtn.addEventListener('click', ()=>{
+  const temaSekarang = document.body.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+  terapkanTema(temaSekarang);
+});
+
+/* ---------------- Data destinasi (diambil dari database lewat API) ---------------- */
+let destinasi = [];
+
+async function loadDestinasi(){
+  try{
+    const res = await fetch('api/get_destinasi.php');
+    const json = await res.json();
+    if(json.success){
+      destinasi = json.data;
+      renderDestGrid();
+      initPeta();
+    }
+  }catch(err){
+    console.error('Gagal memuat destinasi:', err);
+  }
+}
+
+/* ---------------- Peta sebaran destinasi (Leaflet + OpenStreetMap) ---------------- */
+let petaMap = null;
+
+function initPeta(){
+  const container = document.getElementById('mapContainer');
+  if(!container || typeof L === 'undefined') return;
+
+  const titikValid = destinasi.filter(d => d.lat && d.lng);
+  if(titikValid.length === 0){
+    container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--kabut);font-size:14px;padding:20px;text-align:center;">Koordinat destinasi belum tersedia. Isi kolom lat/lng di database untuk menampilkan peta.</div>';
+    return;
+  }
+
+  if(!petaMap){
+    petaMap = L.map('mapContainer', { scrollWheelZoom:false });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(petaMap);
+  } else {
+    petaMap.eachLayer(layer => { if(layer instanceof L.Marker) petaMap.removeLayer(layer); });
+  }
+
+  const markerIcon = L.divIcon({
+    className: 'peta-marker',
+    html: '<span style="display:block;width:16px;height:16px;border-radius:50%;background:#df7a3e;border:2.5px solid #f4eddb;box-shadow:0 0 0 2px rgba(13,32,24,0.6);"></span>',
+    iconSize: [16,16],
+    iconAnchor: [8,8]
+  });
+
+  const bounds = [];
+  titikValid.forEach(d=>{
+    const marker = L.marker([d.lat, d.lng], { icon: markerIcon }).addTo(petaMap);
+    const popupId = `popupBtn_${d.id}`;
+    marker.bindPopup(`
+      <div class="map-popup">
+        <h4>${d.nama}</h4>
+        <p>${d.tag} · ${d.lokasi}</p>
+        <button id="${popupId}">Tanya pemandu AI</button>
+      </div>
+    `);
+    marker.on('popupopen', ()=>{
+      const btn = document.getElementById(popupId);
+      if(btn){
+        btn.addEventListener('click', ()=>{
+          document.getElementById('pemandu').scrollIntoView({behavior:'smooth'});
+          setTimeout(()=> sendMessage(`Ceritakan tentang ${d.nama}: rute, biaya, musim, dan tips berkunjung.`), 400);
+        });
+      }
+    });
+    bounds.push([d.lat, d.lng]);
+  });
+
+  if(bounds.length === 1){
+    petaMap.setView(bounds[0], 8);
+  } else {
+    petaMap.fitBounds(bounds, { padding:[30,30] });
+  }
+
+  setTimeout(()=> petaMap.invalidateSize(), 200);
+}
+
+const generalTopics = [
+  {keywords:["biaya","budget","harga","murah"],
+    answer:"Secara umum biaya wisata alam di Indonesia bervariasi: destinasi dekat kota seperti Bromo atau Ijen bisa mulai Rp200rb–700rb untuk 1 hari, sedangkan destinasi jauh seperti Raja Ampat atau Komodo butuh Rp2jt–15jt karena tiket pesawat dan biaya kapal. Sebut nama destinasinya, aku kasih rincian biayanya."},
+  {keywords:["musim","kapan","waktu terbaik","bulan"],
+    answer:"Umumnya musim kemarau (April–Oktober) paling ideal untuk wisata alam di Indonesia karena cuaca lebih cerah dan jalur lebih aman. Tapi tiap destinasi punya waktu terbaiknya sendiri — sebut nama tempatnya biar aku kasih rekomendasi bulan yang lebih spesifik."},
+  {keywords:["barang","bawa","perlengkapan","packing"],
+    answer:"Perlengkapan dasar untuk wisata alam: jaket/lapisan hangat (terutama dataran tinggi), sepatu trekking, sunblock, air minum cukup, P3K ringan, dan power bank. Untuk destinasi spesifik (gunung, laut, atau kawah) ada tambahan khusus — sebut nama tempatnya ya."},
+  {keywords:["izin","simaksi","tiket","booking"],
+    answer:"Sebagian besar gunung dan taman nasional di Indonesia kini wajib booking online lebih dulu (kuota harian dibatasi), terutama Semeru, Bromo, dan Komodo. Selalu cek website resmi pengelola sebelum berangkat karena kuota cepat penuh saat musim liburan."},
+];
+
+function findDestinasiByText(text){
+  const t = text.toLowerCase();
+  return destinasi.find(d => d.keywords.some(k => t.includes(k)));
+}
+
+function findGeneralTopic(text){
+  const t = text.toLowerCase();
+  return generalTopics.find(g => g.keywords.some(k => t.includes(k)));
+}
+
+function buildDestinasiAnswer(d, text){
+  const t = text.toLowerCase();
+  const wantsRute = /rute|jalan|akses|menuju|naik apa/.test(t);
+  const wantsBiaya = /biaya|harga|budget|berapa/.test(t);
+  const wantsTips = /tips|saran|perlu dibawa|bawa/.test(t);
+  const wantsMusim = /musim|kapan|waktu terbaik|bulan/.test(t);
+
+  // Kalau pertanyaannya spesifik ke satu aspek, jawab itu saja (lebih ringkas & relevan)
+  if(wantsRute && !wantsBiaya && !wantsTips && !wantsMusim){
+    return `Rute ke ${d.nama}:\n${d.rute}`;
+  }
+  if(wantsBiaya && !wantsRute && !wantsTips && !wantsMusim){
+    return `Perkiraan biaya ke ${d.nama}:\n${d.biayaDetail}\n\nCatatan: harga bisa berubah, cek info terbaru ke pengelola resmi sebelum berangkat.`;
+  }
+  if(wantsTips && !wantsRute && !wantsBiaya && !wantsMusim){
+    return `Tips berkunjung ke ${d.nama}:\n${d.tips}`;
+  }
+  if(wantsMusim && !wantsRute && !wantsBiaya && !wantsTips){
+    return `Waktu terbaik ke ${d.nama}:\n${d.musim}`;
+  }
+
+  // Default: ringkasan lengkap
+  return `${d.nama} (${d.lokasi})\n\n📍 Rute: ${d.rute}\n\n💰 Biaya: ${d.biayaDetail}\n\n🗓️ Musim terbaik: ${d.musim}\n\n💡 Tips: ${d.tips}\n\nCatatan: harga & status jalur bisa berubah, selalu cek info terbaru ke pengelola resmi sebelum berangkat.`;
+}
+
+function generateLocalReply(text){
+  const dest = findDestinasiByText(text);
+  if(dest) return buildDestinasiAnswer(dest, text);
+
+  const topic = findGeneralTopic(text);
+  if(topic) return topic.answer;
+
+  const sapaan = /^(hai|halo|hi|hello|pagi|siang|sore|malam)/i.test(text.trim());
+  if(sapaan){
+    return "Halo! Aku pemandu AlamKita. Coba sebutkan destinasi yang kamu mau tahu (misalnya Bromo, Semeru, Raja Ampat, Toba, Ijen, atau Komodo), atau tanyakan soal rute, biaya, musim, dan tips berkunjung.";
+  }
+
+  return "Maaf, aku belum punya info spesifik soal itu. Coba sebutkan nama destinasi alam di Indonesia (misalnya Bromo, Semeru, Raja Ampat, Toba, Ijen, atau Komodo), atau tanyakan seputar rute, biaya, musim terbaik, dan tips berkunjung secara umum.";
+}
+
+
+function cardArt(c1, c2){
+  return `<svg viewBox="0 0 400 170" preserveAspectRatio="none">
+    <rect width="400" height="170" fill="${c2}"/>
+    <polygon points="0,170 0,100 70,40 140,110 210,60 280,120 340,70 400,100 400,170" fill="${c1}"/>
+    <circle cx="330" cy="40" r="22" fill="#df7a3e" opacity="0.85"/>
+  </svg>`;
+}
+
+function renderDestGrid(){
+  const grid = document.getElementById('destGrid');
+  grid.innerHTML = '';
+  destinasi.forEach(d=>{
+    const card = document.createElement('div');
+    card.className = 'dest-card reveal in';
+
+    const artDiv = document.createElement('div');
+    artDiv.className = 'art';
+    if(d.fotoUrl){
+      const img = document.createElement('img');
+      img.src = d.fotoUrl;
+      img.alt = d.nama;
+      img.loading = 'lazy';
+      img.addEventListener('error', ()=>{ artDiv.innerHTML = cardArt(d.warna1, d.warna2); }, {once:true});
+      artDiv.appendChild(img);
+    } else {
+      artDiv.innerHTML = cardArt(d.warna1, d.warna2);
+    }
+
+    const bodyDiv = document.createElement('div');
+    bodyDiv.className = 'body';
+    bodyDiv.innerHTML = `
+      <span class="tag">${d.tag} · ${d.lokasi}</span>
+      <h3>${d.nama}</h3>
+      <p>${d.desc}</p>
+      <div class="meta"><span>${d.durasi}</span><span>${d.biaya}</span></div>`;
+
+    const ulasanBtn = document.createElement('button');
+    ulasanBtn.type = 'button';
+    ulasanBtn.className = 'btn-ulasan';
+    ulasanBtn.textContent = 'Lihat & tulis ulasan';
+    ulasanBtn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      openUlasanModal(d.id, d.nama);
+    });
+    bodyDiv.appendChild(ulasanBtn);
+
+    card.appendChild(artDiv);
+    card.appendChild(bodyDiv);
+    card.addEventListener('click', ()=>{
+      document.getElementById('pemandu').scrollIntoView({behavior:'smooth'});
+      setTimeout(()=> sendMessage(`Ceritakan tentang ${d.nama}: rute, biaya, musim, dan tips berkunjung.`), 400);
+    });
+    grid.appendChild(card);
+  });
+}
+
+loadDestinasi();
+
+/* ---------------- Modal Ulasan ---------------- */
+const ulasanOverlay = document.getElementById('ulasanOverlay');
+const ulasanTitle = document.getElementById('ulasanTitle');
+const ulasanSummary = document.getElementById('ulasanSummary');
+const ulasanList = document.getElementById('ulasanList');
+const ulasanForm = document.getElementById('ulasanForm');
+const ulasanKomentar = document.getElementById('ulasanKomentar');
+const ulasanErr = document.getElementById('ulasanErr');
+const ulasanSubmitBtn = document.getElementById('ulasanSubmitBtn');
+const starButtons = document.querySelectorAll('#ulasanStars .star');
+let ulasanDestinasiId = null;
+let ulasanBintangDipilih = 0;
+
+starButtons.forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    ulasanBintangDipilih = parseInt(btn.dataset.star, 10);
+    starButtons.forEach(b=>{
+      b.classList.toggle('active', parseInt(b.dataset.star,10) <= ulasanBintangDipilih);
+    });
+  });
+});
+
+function resetUlasanForm(){
+  ulasanBintangDipilih = 0;
+  starButtons.forEach(b=> b.classList.remove('active'));
+  ulasanKomentar.value = '';
+  ulasanErr.textContent = '';
+}
+
+async function openUlasanModal(destinasiId, nama){
+  ulasanDestinasiId = destinasiId;
+  ulasanTitle.textContent = `Ulasan · ${nama}`;
+  ulasanSummary.textContent = 'Memuat ulasan...';
+  ulasanList.innerHTML = '';
+  resetUlasanForm();
+  ulasanOverlay.classList.add('active');
+  await muatUlasan();
+}
+
+async function muatUlasan(){
+  try{
+    const res = await fetch(`api/get_ulasan.php?destinasiId=${ulasanDestinasiId}`);
+    const json = await res.json();
+    if(!json.success){
+      ulasanSummary.textContent = 'Gagal memuat ulasan.';
+      return;
+    }
+    ulasanSummary.textContent = json.total > 0
+      ? `⭐ ${json.avg} dari ${json.total} ulasan`
+      : 'Belum ada ulasan, jadilah yang pertama!';
+
+    if(json.data.length === 0){
+      ulasanList.innerHTML = '<div class="ulasan-empty">Belum ada ulasan untuk destinasi ini.</div>';
+      return;
+    }
+    ulasanList.innerHTML = json.data.map(u=>`
+      <div class="ulasan-item">
+        <div class="ulasan-head">
+          <span class="nama">${escapeHtml(u.nama_pengunjung)}</span>
+          <span class="bintang-tampil">${'★'.repeat(u.bintang)}${'☆'.repeat(5-u.bintang)}</span>
+        </div>
+        <div class="komentar">${escapeHtml(u.komentar || '')}</div>
+        <div class="tanggal">${formatTanggalUlasan(u.dibuat_pada)}</div>
+      </div>`).join('');
+  }catch(err){
+    ulasanSummary.textContent = 'Tidak bisa terhubung ke server.';
+  }
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function formatTanggalUlasan(dateStr){
+  try{
+    const d = new Date(dateStr.replace(' ', 'T'));
+    return d.toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'});
+  }catch(e){ return dateStr; }
+}
+
+ulasanForm.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  ulasanErr.textContent = '';
+  if(ulasanBintangDipilih < 1){
+    ulasanErr.textContent = 'Pilih rating bintang dulu ya.';
+    return;
+  }
+  if(ulasanKomentar.value.trim().length < 5){
+    ulasanErr.textContent = 'Tulis komentar minimal 5 karakter.';
+    return;
+  }
+  ulasanSubmitBtn.disabled = true;
+  try{
+    const res = await fetch('api/add_ulasan.php', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        destinasiId: ulasanDestinasiId,
+        bintang: ulasanBintangDipilih,
+        komentar: ulasanKomentar.value.trim()
+      })
+    });
+    const json = await res.json();
+    if(!json.success){
+      ulasanErr.textContent = json.message || 'Gagal mengirim ulasan.';
+      ulasanSubmitBtn.disabled = false;
+      return;
+    }
+    resetUlasanForm();
+    await muatUlasan();
+  }catch(err){
+    ulasanErr.textContent = 'Tidak bisa terhubung ke server.';
+  }
+  ulasanSubmitBtn.disabled = false;
+});
+
+document.getElementById('ulasanCloseBtn').addEventListener('click', ()=>{
+  ulasanOverlay.classList.remove('active');
+});
+ulasanOverlay.addEventListener('click', (e)=>{
+  if(e.target === ulasanOverlay) ulasanOverlay.classList.remove('active');
+});
+
+/* ---------------- Reveal on scroll ---------------- */
+try{
+  const revealEls = document.querySelectorAll('.reveal');
+  if('IntersectionObserver' in window){
+    const obs = new IntersectionObserver((entries)=>{
+      entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); obs.unobserve(e.target); } });
+    },{threshold:0.12});
+    revealEls.forEach(el=>obs.observe(el));
+  } else {
+    revealEls.forEach(el=>el.classList.add('in'));
+  }
+}catch(err){
+  document.querySelectorAll('.reveal').forEach(el=>el.classList.add('in'));
+}
+
+/* ---------------- Login / Register (pakai database) ---------------- */
+const loginForm = document.getElementById('loginForm');
+const namaInput = document.getElementById('namaInput');
+const emailInput = document.getElementById('emailInput');
+const passwordInput = document.getElementById('passwordInput');
+const namaField = document.getElementById('namaField');
+const authTitle = document.getElementById('authTitle');
+const authSub = document.getElementById('authSub');
+const authSubmitBtn = document.getElementById('authSubmitBtn');
+const authToggleText = document.getElementById('authToggleText');
+const authToggleLink = document.getElementById('authToggleLink');
+const formErr = document.getElementById('formErr');
+let currentUser = { id:null, nama:"", email:"" };
+let authMode = 'login'; // 'login' atau 'register'
+
+function setAuthMode(mode){
+  authMode = mode;
+  formErr.textContent = '';
+  if(mode === 'register'){
+    namaField.style.display = 'block';
+    authTitle.textContent = 'Buat akun baru.';
+    authSub.textContent = 'Daftar pakai nama, email, dan password untuk mulai bertanya pada pemandu AI.';
+    authSubmitBtn.textContent = 'Daftar & mulai jelajah';
+    authToggleText.textContent = 'Sudah punya akun?';
+    authToggleLink.textContent = 'Masuk di sini';
+  } else {
+    namaField.style.display = 'none';
+    authTitle.textContent = 'Selamat datang.';
+    authSub.textContent = 'Masuk dengan akunmu untuk mulai bertanya pada pemandu AI seputar destinasi, rute, biaya, dan tips perjalananmu.';
+    authSubmitBtn.textContent = 'Masuk';
+    authToggleText.textContent = 'Belum punya akun?';
+    authToggleLink.textContent = 'Daftar di sini';
+  }
+}
+authToggleLink.addEventListener('click', (e)=>{
+  e.preventDefault();
+  setAuthMode(authMode === 'login' ? 'register' : 'login');
+});
+
+function masukKeApp(user, sapaanBaru){
+  currentUser = user;
+  document.getElementById('userGreeting').textContent = `Halo, ${user.nama.split(' ')[0]}`;
+  window.scrollTo(0,0);
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').classList.add('active');
+  initChatSesi(sapaanBaru ? user.nama : null);
+}
+
+loginForm.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const nama = namaInput.value.trim();
+  const email = emailInput.value.trim();
+  const password = passwordInput.value;
+  let ok = true;
+  document.getElementById('namaErr').textContent = '';
+  document.getElementById('emailErr').textContent = '';
+  document.getElementById('passwordErr').textContent = '';
+  formErr.textContent = '';
+
+  if(authMode === 'register' && nama.length < 2){
+    document.getElementById('namaErr').textContent = 'Masukkan nama lengkapmu.';
+    ok = false;
+  }
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  if(!emailPattern.test(email)){
+    document.getElementById('emailErr').textContent = 'Masukkan alamat email yang valid.';
+    ok = false;
+  }
+  if(password.length < 6){
+    document.getElementById('passwordErr').textContent = 'Password minimal 6 karakter.';
+    ok = false;
+  }
+  if(!ok) return;
+
+  authSubmitBtn.disabled = true;
+  try{
+    const endpoint = authMode === 'register' ? 'api/register.php' : 'api/login.php';
+    const body = authMode === 'register' ? {nama, email, password} : {email, password};
+    const res = await fetch(endpoint, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    const json = await res.json();
+    if(!json.success){
+      formErr.textContent = json.message || 'Terjadi kesalahan, coba lagi.';
+      authSubmitBtn.disabled = false;
+      return;
+    }
+    masukKeApp(json.user, true);
+  }catch(err){
+    formErr.textContent = 'Tidak bisa terhubung ke server. Pastikan backend PHP sudah berjalan.';
+  }
+  authSubmitBtn.disabled = false;
+});
+
+document.getElementById('logoutBtn').addEventListener('click', async ()=>{
+  try{ await fetch('api/logout.php'); }catch(err){}
+  document.getElementById('app').classList.remove('active');
+  document.getElementById('loginScreen').style.display = 'flex';
+  namaInput.value = '';
+  emailInput.value = '';
+  passwordInput.value = '';
+  chatBody.innerHTML = '';
+  chatSesiId = null;
+});
+
+/* Cek apakah sudah ada sesi login aktif (auto-login pas refresh) */
+async function cekSesiAktif(){
+  try{
+    const res = await fetch('api/check_session.php');
+    const json = await res.json();
+    if(json.loggedIn){
+      masukKeApp(json.user, false);
+    }
+  }catch(err){
+    console.error('Gagal cek sesi login:', err);
+  }
+}
+cekSesiAktif();
+
+/* ---------------- Chat / AI pemandu (histori disimpan ke database) ---------------- */
+const chatBody = document.getElementById('chatBody');
+const chatForm = document.getElementById('chatForm');
+const chatInput = document.getElementById('chatInput');
+let chatHistory = [];
+let isSending = false;
+let chatSesiId = null;
+
+/* Mulai sesi chat baru di database, lalu tampilkan sapaan / riwayat lama */
+async function initChatSesi(namaBaruDaftar){
+  chatBody.innerHTML = '';
+  try{
+    const res = await fetch('api/chat_start.php');
+    const json = await res.json();
+    if(json.success){
+      chatSesiId = json.sesiId;
+    }
+  }catch(err){
+    console.error('Gagal memulai sesi chat:', err);
+  }
+
+  if(namaBaruDaftar){
+    const sapaan = `Halo ${namaBaruDaftar.split(' ')[0]}! Aku pemandu AlamKita. Mau jelajah ke mana? Tanyakan rute, biaya, atau tips berkunjung — aku bantu jawab.`;
+    addMessage('bot', sapaan);
+    simpanPesanKeDb('assistant', sapaan);
+  } else {
+    addMessage('bot', `Halo ${currentUser.nama.split(' ')[0]}! Mau lanjut jelajah ke mana hari ini?`);
+  }
+}
+
+async function simpanPesanKeDb(peran, isiPesan){
+  if(!chatSesiId) return;
+  try{
+    await fetch('api/save_pesan.php', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({sesiId: chatSesiId, peran, isiPesan})
+    });
+  }catch(err){
+    console.error('Gagal menyimpan pesan:', err);
+  }
+}
+
+function addMessage(role, text){
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  div.textContent = text;
+  chatBody.appendChild(div);
+  chatBody.scrollTop = chatBody.scrollHeight;
+}
+
+function showTyping(){
+  const div = document.createElement('div');
+  div.className = 'typing';
+  div.id = 'typingIndicator';
+  div.innerHTML = '<span></span><span></span><span></span>';
+  chatBody.appendChild(div);
+  chatBody.scrollTop = chatBody.scrollHeight;
+}
+function hideTyping(){
+  const el = document.getElementById('typingIndicator');
+  if(el) el.remove();
+}
+
+function sendMessage(text){
+  if(!text || isSending) return;
+  isSending = true;
+  addMessage('user', text);
+  chatHistory.push({role:'user', content:text});
+  simpanPesanKeDb('user', text);
+  chatInput.value = '';
+  showTyping();
+
+  // Jawaban dibuat secara lokal di browser (pencocokan kata kunci), tanpa API berbayar.
+  const delay = 500 + Math.random()*500;
+  setTimeout(()=>{
+    hideTyping();
+    const reply = generateLocalReply(text);
+    addMessage('bot', reply);
+    chatHistory.push({role:'assistant', content: reply});
+    simpanPesanKeDb('assistant', reply);
+    isSending = false;
+  }, delay);
+}
+
+
+chatForm.addEventListener('submit', (e)=>{
+  e.preventDefault();
+  const text = chatInput.value.trim();
+  if(text) sendMessage(text);
+});
+
+document.getElementById('chipRow').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.chip');
+  if(btn) sendMessage(btn.dataset.q);
+});
+</script>
+</body>
+</html>
