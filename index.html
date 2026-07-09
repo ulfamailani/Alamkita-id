@@ -3,18 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" id="viewportMeta" content="width=device-width, initial-scale=1.0">
-<script>
-  // Paksa layout desktop di HP dari awal render, biar browser
-  // otomatis ngitung skala zoom-out yang pas (kayak "Buka versi Desktop").
-  // Kalau diubah belakangan pakai JS setelah halaman dimuat, browser
-  // gak mau ngitung ulang skalanya lagi — makanya harus dari sini.
-  (function(){
-    if(window.screen && window.screen.width < 1024){
-      var vp = document.getElementById('viewportMeta');
-      if(vp) vp.setAttribute('content', 'width=900');
-    }
-  })();
-</script>
 <title>AlamKita.id — Pemandu Wisata Alam Indonesia</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Work+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -127,7 +115,7 @@
 
   .login-note{ margin-top:22px; font-size:12.5px; color:#857a69; line-height:1.5; }
 
-  @media (max-width: 920px){
+  @media (max-width: 860px){
     #loginScreen{ flex-direction:column; height:auto; min-height:100%; }
     .login-art{ flex:none; height:32vh; min-height:220px; }
     .login-panel{ flex:none; max-width:none; min-height:0; }
@@ -994,7 +982,29 @@ function masukKeApp(user, sapaanBaru){
   window.scrollTo(0,0);
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').classList.add('active');
+  terapkanViewportApp();
   initChatSesi(sapaanBaru ? user.nama : null);
+}
+
+/* Ganti total elemen <meta viewport> (bukan cuma atribut) supaya Safari/Chrome
+   mau ngitung ulang skala zoom-nya. Cuma jalan di layar kecil (HP), dan cuma
+   dipanggil setelah masuk ke halaman utama (bukan di halaman login). */
+function gantiMetaViewport(contentBaru){
+  const lama = document.getElementById('viewportMeta');
+  if(!lama) return;
+  const baru = document.createElement('meta');
+  baru.name = 'viewport';
+  baru.id = 'viewportMeta';
+  baru.content = contentBaru;
+  lama.parentNode.replaceChild(baru, lama);
+}
+function terapkanViewportApp(){
+  if(window.screen && window.screen.width < 1024){
+    gantiMetaViewport('width=900');
+  }
+}
+function resetViewportLogin(){
+  gantiMetaViewport('width=device-width, initial-scale=1.0');
 }
 
 loginForm.addEventListener('submit', async (e)=>{
@@ -1049,6 +1059,7 @@ document.getElementById('logoutBtn').addEventListener('click', async ()=>{
   try{ await fetch('api/logout.php'); }catch(err){}
   document.getElementById('app').classList.remove('active');
   document.getElementById('loginScreen').style.display = 'flex';
+  resetViewportLogin();
   namaInput.value = '';
   emailInput.value = '';
   passwordInput.value = '';
