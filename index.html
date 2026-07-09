@@ -3,18 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" id="viewportMeta" content="width=device-width, initial-scale=1.0">
-<script>
-  // Paksa render layout desktop di HP: kalau layar fisik < 1024px,
-  // "bohongi" browser supaya nganggep viewport-nya selebar 1280px,
-  // sama seperti fitur "Buka versi desktop" di browser.
-  (function(){
-    var DESKTOP_WIDTH = 1280;
-    if(window.screen && window.screen.width < 1024){
-      var vp = document.getElementById('viewportMeta');
-      if(vp) vp.setAttribute('content', 'width=' + DESKTOP_WIDTH);
-    }
-  })();
-</script>
 <title>AlamKita.id — Pemandu Wisata Alam Indonesia</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Work+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -297,7 +285,7 @@
   .chat-input{ display:flex; gap:10px; padding:16px; border-top:1px solid var(--line); }
   .chat-input input{
     flex:1; padding:13px 15px; border-radius:999px; border:1px solid var(--line);
-    background: rgba(244,237,219,0.05); color:var(--krem); font-size:14px; font-family:'Work Sans',sans-serif;
+    background: rgba(244,237,219,0.05); color:var(--krem); font-size:16px; font-family:'Work Sans',sans-serif;
   }
   .chat-input input::placeholder{ color: var(--kabut); opacity:0.5; }
   .chat-input input:focus{ outline:none; border-color:var(--senja); }
@@ -994,7 +982,23 @@ function masukKeApp(user, sapaanBaru){
   window.scrollTo(0,0);
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').classList.add('active');
+  terapkanViewportApp();
   initChatSesi(sapaanBaru ? user.nama : null);
+}
+
+/* Paksa layout desktop khusus untuk halaman #app (bukan halaman login) di HP,
+   supaya kartu destinasi otomatis jadi 2 kolom & ukurannya nggak kekecilan */
+function terapkanViewportApp(){
+  const vp = document.getElementById('viewportMeta');
+  if(!vp) return;
+  if(window.screen && window.screen.width < 1024){
+    vp.setAttribute('content', 'width=900');
+  }
+}
+function resetViewportLogin(){
+  const vp = document.getElementById('viewportMeta');
+  if(!vp) return;
+  vp.setAttribute('content', 'width=device-width, initial-scale=1.0');
 }
 
 loginForm.addEventListener('submit', async (e)=>{
@@ -1049,6 +1053,7 @@ document.getElementById('logoutBtn').addEventListener('click', async ()=>{
   try{ await fetch('api/logout.php'); }catch(err){}
   document.getElementById('app').classList.remove('active');
   document.getElementById('loginScreen').style.display = 'flex';
+  resetViewportLogin();
   namaInput.value = '';
   emailInput.value = '';
   passwordInput.value = '';
@@ -1077,6 +1082,15 @@ const chatInput = document.getElementById('chatInput');
 let chatHistory = [];
 let isSending = false;
 let chatSesiId = null;
+
+/* Cegah Safari auto-zoom pas keyboard muncul di layar desktop-mode (HP) */
+chatInput.addEventListener('focus', ()=>{
+  const vp = document.getElementById('viewportMeta');
+  if(vp) vp.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0');
+});
+chatInput.addEventListener('blur', ()=>{
+  terapkanViewportApp();
+});
 
 /* Mulai sesi chat baru di database, lalu tampilkan sapaan / riwayat lama */
 async function initChatSesi(namaBaruDaftar){
