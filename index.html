@@ -669,12 +669,21 @@ function initPeta(){
   });
 
   if(bounds.length === 1){
-    petaMap.setView(bounds[0], 8);
+    petaMap.setView(bounds[0], 8, { animate:false });
   } else {
-    petaMap.fitBounds(bounds, { padding:[30,30] });
+    petaMap.fitBounds(bounds, { padding:[30,30], animate:false });
   }
 
-  setTimeout(()=> petaMap.invalidateSize(), 200);
+  // pastikan ukuran kontainer sudah final SEBELUM hitung ulang fit,
+  // biar zoom levelnya gak "meleset" terus keliatan ngezoom pas awal dibuka
+  setTimeout(()=>{
+    petaMap.invalidateSize();
+    if(bounds.length === 1){
+      petaMap.setView(bounds[0], 8, { animate:false });
+    } else {
+      petaMap.fitBounds(bounds, { padding:[30,30], animate:false });
+    }
+  }, 200);
 }
 
 const generalTopics = [
