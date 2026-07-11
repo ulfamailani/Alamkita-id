@@ -10,6 +10,7 @@ if (!empty($_SESSION['user_id'])) {
             'id' => $_SESSION['user_id'],
             'nama' => $_SESSION['user_nama'],
             'email' => $_SESSION['user_email'],
+            'role' => (isset($_SESSION['user_role']) ? $_SESSION['user_role'] : 'user'),
         ]
     ]);
 } else {
